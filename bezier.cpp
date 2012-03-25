@@ -12,6 +12,14 @@
 using namespace std;
 
 
+GLfloat controlPoints[4][3]={
+	{100.0f, 100.0f, 0},
+	{500.0f, 100.0f, 0},
+	{-100.0f, 400.0f, 0},
+	{200.0f, 300.0f, 0}
+};
+
+
 void drawSquare(GLfloat x, GLfloat y, GLfloat w=50.0f, GLfloat h=50.0f){
 	GLfloat _w = w/2;
 	GLfloat _h = h/2;
@@ -57,11 +65,11 @@ int main(int argc, char **argv) {
 
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f,0,1.0f);
-		glVertex3f(100.0f, 100.0f, 0);
+		glVertex3f(300.0f, 300.0f, 0);
 
-		glVertex3f(250.0f, 100.0f, 0);
+		glVertex3f(450.0f, 300.0f, 0);
 
-		glVertex3f(175.0f, 200.0f, 0);
+		glVertex3f(375.0f, 400.0f, 0);
 	glEnd();
 
 	glBegin(GL_QUADS);
@@ -76,6 +84,20 @@ int main(int argc, char **argv) {
 	glEnd();
 
 	drawSquare(320,240);
+	
+	glBegin(GL_LINE_STRIP);
+		glColor3f(1.0f,0,0);
+		float t=0.0f;
+		float t_=1.0f;
+		for(int i=0; i<30; i++){
+			glVertex3f(t_*t_*t_*controlPoints[0][0] + 3*t*t_*t_*controlPoints[1][0] + 3*t*t*t_*controlPoints[2][0] + t*t*t*controlPoints[3][0], 
+				t_*t_*t_*controlPoints[0][1] + 3*t*t_*t_*controlPoints[1][1] + 3*t*t*t_*controlPoints[2][1] + t*t*t*controlPoints[3][1],
+				t_*t_*t_*controlPoints[0][2] + 3*t*t_*t_*controlPoints[1][2] + 3*t*t*t_*controlPoints[2][2] + t*t*t*controlPoints[3][2]);
+			
+			t += 1.0f/30;
+			t_ = 1-t;
+		}
+	glEnd();
 
 	SDL_GL_SwapBuffers();
 

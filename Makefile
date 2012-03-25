@@ -1,12 +1,12 @@
 CC=g++
-exe=game.exe
+exe=bezier
 libs=-lSDL -lGL
 
-all: SDL_GL.o
-	$(CC) -o $(exe) SDL_GL.o $(libs)
+all: bezier.o
+	$(CC) -o $(exe) bezier.o $(libs)
 
-SDL_GL.o: SDL_GL.cpp
-	$(CC) -c SDL_GL.cpp
+bezier.o: bezier.cpp
+	$(CC) -c bezier.cpp
 
 clean:
 	rm -f $(exe)
