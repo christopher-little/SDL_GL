@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 	//SDL_FillRect(screen, &screen->clip_rect, SDL_MapRGB(screen->format, 0xFF,0xFF,0));
 	//SDL_Flip(screen);
 
-	glEnable(GL_TEXTURE_2D);
+	// Create an orthographic projection such that origin (0,0) is top-left
 	glClearColor(1.0f, 1.0f, 0, 0);
 	glViewport(0,0,640,480);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -62,6 +62,9 @@ int main(int argc, char **argv) {
 	glOrtho(0, 640, 480, 0, -1.0f, 1.0f);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+
+	// Enable texture mapping
+	glEnable(GL_TEXTURE_2D);
 
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f,0,1.0f);
@@ -84,22 +87,84 @@ int main(int argc, char **argv) {
 	glEnd();
 
 	drawSquare(320,240);
-	
+
+
+	// Create a display list
+	GLuint listIndex = glGenLists(1);
+	if(listIndex == 0){
+		cout << "List failed" << endl;
+		return 1;
+	}
+
+	glNewList(listIndex, GL_COMPILE);
+		glBegin(GL_TRIANGLE_STRIP);
+		/*
+		glBegin(GL_TRIANGLES);
+			glVertex2f(50.0f, 0.0f);
+			glVertex2f(0.0f, 100.0f);
+			glVertex2f(60.0f, 10.0f);
+
+			glVertex2f(60.0f, 10.0f);
+			glVertex2f(0.0f, 100.0f);
+			glVertex2f(80.0f, 50.0f);
+
+			glVertex2f(80.0f, 50.0f);
+			glVertex2f(0.0f, 100.0f);
+			glVertex2f(60.0f, 90.0f);
+
+			glVertex2f(80.0f, 50.0f);
+			glVertex2f(60.0f, 90.0f);
+			glVertex2f(90.0f, 110.0f);
+
+			glVertex2f(80.0f, 50.0f);
+			glVertex2f(90.0f, 110.0f);
+			glVertex2f(120.0f, 90.0f);
+		*/
+			glVertex2f(50.0f, 0.0f); // A
+			glVertex2f(100.0f, 15.0f); // B
+			glVertex2f(0.0f, 100.0f); // C
+
+			glVertex2f(140.0f, 70.0f); // D
+
+			glVertex2f(120.0f, 120.0f); // E
+
+			glVertex2f(200.0f, 110.0f); // F
+
+			glVertex2f(150.0f, 150.0f); // G
+		glEnd();
+	glEndList();
+
+	// Draw the display list in a couple different colours and locations
+	glColor3f(0,0,1.0f);
+	glCallList(listIndex);
+	glColor3f(0,1.0f,1.0f);
+	glPushMatrix();
+	glTranslatef(150.0f, 150.0f, 0.0f);
+	glCallList(listIndex);
+	glPopMatrix();
+
+
+
+	// Draw a bezier curve
 	glBegin(GL_LINE_STRIP);
 		glColor3f(1.0f,0,0);
 		float t=0.0f;
 		float t_=1.0f;
 		for(int i=0; i<30; i++){
-			glVertex3f(t_*t_*t_*controlPoints[0][0] + 3*t*t_*t_*controlPoints[1][0] + 3*t*t*t_*controlPoints[2][0] + t*t*t*controlPoints[3][0], 
+			glVertex3f(t_*t_*t_*controlPoints[0][0] + 3*t*t_*t_*controlPoints[1][0] + 3*t*t*t_*controlPoints[2][0] + t*t*t*controlPoints[3][0],
 				t_*t_*t_*controlPoints[0][1] + 3*t*t_*t_*controlPoints[1][1] + 3*t*t*t_*controlPoints[2][1] + t*t*t*controlPoints[3][1],
 				t_*t_*t_*controlPoints[0][2] + 3*t*t_*t_*controlPoints[1][2] + 3*t*t*t_*controlPoints[2][2] + t*t*t*controlPoints[3][2]);
-			
+
 			t += 1.0f/30;
 			t_ = 1-t;
 		}
 	glEnd();
 
+
+
+
 	SDL_GL_SwapBuffers();
+
 
 
 	bool quit=false;
