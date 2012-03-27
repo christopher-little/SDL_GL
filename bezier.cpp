@@ -7,11 +7,13 @@
 //============================================================================
 
 #include <iostream>
+#include <ctime>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
 using namespace std;
 
 
+// Bezier curve control points
 GLfloat controlPoints[4][3]={
 	{100.0f, 100.0f, 0},
 	{500.0f, 100.0f, 0},
@@ -160,6 +162,42 @@ int main(int argc, char **argv) {
 		}
 	glEnd();
 
+
+
+	// Lets try texture mapping something...
+	srand(time(NULL));
+	int texWidth = 64;
+	int texHeight = 64;
+	// Generate random texture data
+	GLubyte imageData[texWidth*texHeight*3];
+	for(int i=0; i<texWidth*texHeight*3; i++){
+		imageData[i] = GLubyte(rand() % 256);
+	}
+
+	GLint texID = 13;
+	glBindTexture(GL_TEXTURE_2D, texID);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+
+	glColor3f(0.0f,1.0f,0.0f);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0,0.0);
+		glVertex2f(250.0f,400.0f);
+		glTexCoord2f(1.0,0.0);
+		glVertex2f(314.0f, 400.0f);
+		glTexCoord2f(1.0,1.0);
+		glVertex2f(314.0f, 464.0f);
+		glTexCoord2f(0.0,1.0);
+		glVertex2f(250.0f, 464.0f);
+	glEnd();
 
 
 
