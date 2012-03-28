@@ -13,6 +13,12 @@
 using namespace std;
 
 
+static GLuint listIndex; // Index of the display list I'm using
+static GLuint texID; // Texture index identifier for the texture I'll be rendering
+
+static GLfloat mouseX = 0;
+static GLfloat mouseY = 0;
+
 // Bezier curve control points
 GLfloat controlPoints[4][3]={
 	{100.0f, 100.0f, 0},
@@ -20,6 +26,7 @@ GLfloat controlPoints[4][3]={
 	{-100.0f, 400.0f, 0},
 	{200.0f, 300.0f, 0}
 };
+
 
 
 void drawSquare(GLfloat x, GLfloat y, GLfloat w=50.0f, GLfloat h=50.0f){
@@ -35,6 +42,90 @@ void drawSquare(GLfloat x, GLfloat y, GLfloat w=50.0f, GLfloat h=50.0f){
 
 		glVertex3f(x-_w, y+_h, 0);
 	glEnd();
+}
+
+void redraw(){
+	// Draw a triangle and a square
+	glBegin(GL_TRIANGLES);
+		glColor3f(1.0f,0,1.0f);
+		glVertex3f(300.0f, 300.0f, 0);
+
+		glVertex3f(450.0f, 300.0f, 0);
+
+		glVertex3f(375.0f, 400.0f, 0);
+	glEnd();
+
+	glBegin(GL_QUADS);
+		glColor3f(0.0f,1.0f,1.0f);
+		glVertex3f(300.0f, 100.0f, 0);
+
+		glVertex3f(450.0f, 100.0f, 0);
+
+		glVertex3f(450.0f, 250.0f, 0);
+
+		glVertex3f(300.0f, 250.0f, 0);
+	glEnd();
+
+	// Draw a square centered at the mouse pointer
+	glPushMatrix();
+	glTranslatef(mouseX-25.0f,mouseY-25.0f, 0);
+	glBegin(GL_QUADS);
+		glColor3f(0.0f,1.0f,1.0f);
+		glVertex3f(0, 0, 0);
+
+		glVertex3f(0, 50.0f, 0);
+
+		glVertex3f(50.0f, 50.0f, 0);
+
+		glVertex3f(50.0f, 0, 0);
+	glEnd();
+	glPopMatrix();
+
+
+	// Draw the display list in a couple different colours and locations
+	glColor3f(0,0,1.0f);
+	glCallList(listIndex);
+	glColor3f(0,1.0f,1.0f);
+	glPushMatrix();
+	glTranslatef(150.0f, 150.0f, 0.0f);
+	glCallList(listIndex);
+	glPopMatrix();
+
+
+	// Draw a bezier curve
+	glBegin(GL_LINE_STRIP);
+		glColor3f(1.0f,0,0);
+		float t=0.0f;
+		float t_=1.0f;
+		for(int i=0; i<30; i++){
+			glVertex3f(t_*t_*t_*controlPoints[0][0] + 3*t*t_*t_*controlPoints[1][0] + 3*t*t*t_*controlPoints[2][0] + t*t*t*controlPoints[3][0],
+				t_*t_*t_*controlPoints[0][1] + 3*t*t_*t_*controlPoints[1][1] + 3*t*t*t_*controlPoints[2][1] + t*t*t*controlPoints[3][1],
+				t_*t_*t_*controlPoints[0][2] + 3*t*t_*t_*controlPoints[1][2] + 3*t*t*t_*controlPoints[2][2] + t*t*t*controlPoints[3][2]);
+
+			t += 1.0f/30;
+			t_ = 1-t;
+		}
+	glEnd();
+
+
+
+	// Draw a textured square
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, texID);
+
+	glColor3f(0.0f,1.0f,0.0f);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0,0.0);
+		glVertex2f(250.0f,400.0f);
+		glTexCoord2f(1.0,0.0);
+		glVertex2f(314.0f, 400.0f);
+		glTexCoord2f(1.0,1.0);
+		glVertex2f(314.0f, 464.0f);
+		glTexCoord2f(0.0,1.0);
+		glVertex2f(250.0f, 464.0f);
+	glEnd();
+
+	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -65,34 +156,11 @@ int main(int argc, char **argv) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// Enable texture mapping
-	glEnable(GL_TEXTURE_2D);
 
-	glBegin(GL_TRIANGLES);
-		glColor3f(1.0f,0,1.0f);
-		glVertex3f(300.0f, 300.0f, 0);
-
-		glVertex3f(450.0f, 300.0f, 0);
-
-		glVertex3f(375.0f, 400.0f, 0);
-	glEnd();
-
-	glBegin(GL_QUADS);
-		glColor3f(0.0f,1.0f,1.0f);
-		glVertex3f(300.0f, 100.0f, 0);
-
-		glVertex3f(450.0f, 100.0f, 0);
-
-		glVertex3f(450.0f, 250.0f, 0);
-
-		glVertex3f(300.0f, 250.0f, 0);
-	glEnd();
-
-	drawSquare(320,240);
 
 
 	// Create a display list
-	GLuint listIndex = glGenLists(1);
+	listIndex = glGenLists(1);
 	if(listIndex == 0){
 		cout << "List failed" << endl;
 		return 1;
@@ -100,28 +168,6 @@ int main(int argc, char **argv) {
 
 	glNewList(listIndex, GL_COMPILE);
 		glBegin(GL_TRIANGLE_STRIP);
-		/*
-		glBegin(GL_TRIANGLES);
-			glVertex2f(50.0f, 0.0f);
-			glVertex2f(0.0f, 100.0f);
-			glVertex2f(60.0f, 10.0f);
-
-			glVertex2f(60.0f, 10.0f);
-			glVertex2f(0.0f, 100.0f);
-			glVertex2f(80.0f, 50.0f);
-
-			glVertex2f(80.0f, 50.0f);
-			glVertex2f(0.0f, 100.0f);
-			glVertex2f(60.0f, 90.0f);
-
-			glVertex2f(80.0f, 50.0f);
-			glVertex2f(60.0f, 90.0f);
-			glVertex2f(90.0f, 110.0f);
-
-			glVertex2f(80.0f, 50.0f);
-			glVertex2f(90.0f, 110.0f);
-			glVertex2f(120.0f, 90.0f);
-		*/
 			glVertex2f(50.0f, 0.0f); // A
 			glVertex2f(100.0f, 15.0f); // B
 			glVertex2f(0.0f, 100.0f); // C
@@ -136,34 +182,10 @@ int main(int argc, char **argv) {
 		glEnd();
 	glEndList();
 
-	// Draw the display list in a couple different colours and locations
-	glColor3f(0,0,1.0f);
-	glCallList(listIndex);
-	glColor3f(0,1.0f,1.0f);
-	glPushMatrix();
-	glTranslatef(150.0f, 150.0f, 0.0f);
-	glCallList(listIndex);
-	glPopMatrix();
 
 
-
-	// Draw a bezier curve
-	glBegin(GL_LINE_STRIP);
-		glColor3f(1.0f,0,0);
-		float t=0.0f;
-		float t_=1.0f;
-		for(int i=0; i<30; i++){
-			glVertex3f(t_*t_*t_*controlPoints[0][0] + 3*t*t_*t_*controlPoints[1][0] + 3*t*t*t_*controlPoints[2][0] + t*t*t*controlPoints[3][0],
-				t_*t_*t_*controlPoints[0][1] + 3*t*t_*t_*controlPoints[1][1] + 3*t*t*t_*controlPoints[2][1] + t*t*t*controlPoints[3][1],
-				t_*t_*t_*controlPoints[0][2] + 3*t*t_*t_*controlPoints[1][2] + 3*t*t*t_*controlPoints[2][2] + t*t*t*controlPoints[3][2]);
-
-			t += 1.0f/30;
-			t_ = 1-t;
-		}
-	glEnd();
-
-
-
+	// Enable texture mapping
+	glEnable(GL_TEXTURE_2D);
 	// Lets try texture mapping something...
 	srand(time(NULL));
 	int texWidth = 64;
@@ -174,7 +196,7 @@ int main(int argc, char **argv) {
 		imageData[i] = GLubyte(rand() % 256);
 	}
 
-	GLint texID = 13;
+	glGenTextures(1, &texID);
 	glBindTexture(GL_TEXTURE_2D, texID);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -187,19 +209,13 @@ int main(int argc, char **argv) {
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
 
-	glColor3f(0.0f,1.0f,0.0f);
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0,0.0);
-		glVertex2f(250.0f,400.0f);
-		glTexCoord2f(1.0,0.0);
-		glVertex2f(314.0f, 400.0f);
-		glTexCoord2f(1.0,1.0);
-		glVertex2f(314.0f, 464.0f);
-		glTexCoord2f(0.0,1.0);
-		glVertex2f(250.0f, 464.0f);
-	glEnd();
+	// Disable texturing so it isn't drawn on EVERY surface
+	glDisable(GL_TEXTURE_2D);
 
 
+
+	// Draw the scene to start off
+	redraw();
 
 	SDL_GL_SwapBuffers();
 
@@ -211,17 +227,23 @@ int main(int argc, char **argv) {
 	while(quit == false){
 		if(SDL_PollEvent(&event)){
 			if(event.type == SDL_MOUSEBUTTONDOWN){
-				glClear(GL_COLOR_BUFFER_BIT);
-
-				drawSquare(event.button.x, event.button.y);
-
-				SDL_GL_SwapBuffers();
+				mouseX = event.button.x;
+				mouseY = event.button.y;
 			}
 			else if(event.type == SDL_QUIT)
 				quit = true;
 		}
+
+		// Clear and redraw the screen for each frame
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		redraw();
+
+		SDL_GL_SwapBuffers();
 	}
 
+
+	// Clean up and quit
 	SDL_Quit();
 	return 0;
 }
