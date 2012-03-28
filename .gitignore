@@ -1,4 +1,6 @@
 bezier
+*.exe
 *.o
 .cproject
 .project
+SDL.dll
