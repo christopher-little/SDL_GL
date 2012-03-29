@@ -12,6 +12,12 @@
 #include <SDL/SDL_opengl.h>
 using namespace std;
 
+// Variables to control game update (tick) rate
+const static int MAXIMUM_TICK_RATE = 120; // The frequency of game state updates
+const static int MINIMUM_FRAME_RATE = 15; // Constraint on number of updates per frame (if frame-rate gets too slow, don't update the game state as frequently)
+const static double UPDATE_INTERVAL = 1000.0/MAXIMUM_TICK_RATE; // Time (in Seconds) that passes between game state updates
+const static double MAX_CYCLES_PER_FRAME = MAXIMUM_TICK_RATE/MINIMUM_FRAME_RATE; // The maximum number of game state updates per frame before update frequency must slow
+
 
 static GLuint listIndex; // Index of the display list I'm using
 static GLuint texID; // Texture index identifier for the texture I'll be rendering
@@ -19,9 +25,9 @@ static GLuint texID; // Texture index identifier for the texture I'll be renderi
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
 
-static GLfloat squareX = 300.0f; // Position
+static GLfloat squareX = 0.0f; // Position
 static GLfloat squareY = 100.0f;
-static GLfloat squareV = 50.0f; // Velocity (pixels per second
+static GLfloat squareV = 50.0f; // Velocity (pixels per second)
 
 
 // Bezier curve control points
@@ -34,8 +40,16 @@ GLfloat controlPoints[4][3]={
 
 
 
+// Update the game state
+void tick(){
+	squareX += squareV*(UPDATE_INTERVAL/1000.0);
+}
+
+
 // Redraws the screen given the amount of time since the last frame
-void redraw(Uint32 time_gap){
+void redraw(){
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	// Draw a triangle and a square
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f,0,1.0f);
@@ -47,9 +61,6 @@ void redraw(Uint32 time_gap){
 	glEnd();
 
 
-	// If the time gap (time since last frame redraw) is not 0, calculate the new position of the square
-	if(time_gap != 0)
-		squareX += squareV*(time_gap/1000.0f);
 	// Draw the square at its new position
 	glPushMatrix();
 	glTranslatef(squareX, squareY, 0);
@@ -216,36 +227,51 @@ int main(int argc, char **argv) {
 
 
 	// Draw the scene to start off
-	redraw(0);
+	redraw();
 
 	SDL_GL_SwapBuffers();
 
 
 
+	// Start the game loop
 	bool quit=false;
 	SDL_Event event;
-	Uint32 last_tick=0;
-	Uint32 time_gap=0;
+	double lastFrameTime = 0.0;
+	double cyclesLeftOver = 0.0;
+	double currentTime;
+	double updateIterations; // Actually an interval (rather than number of game state updates)
 
 	while(quit == false){
-		if(SDL_PollEvent(&event)){
-			if(event.type == SDL_MOUSEBUTTONDOWN){
-				mouseX = event.button.x;
-				mouseY = event.button.y;
-			}
-			else if(event.type == SDL_QUIT)
-				quit = true;
+		currentTime = SDL_GetTicks();
+		updateIterations = ((currentTime-lastFrameTime) + cyclesLeftOver);
+
+		// Cap the number of iterations if the time between frames is getting too large
+		if(updateIterations > (MAX_CYCLES_PER_FRAME * UPDATE_INTERVAL)){ //... this is actually 1.0/MINIMUM_TICK_RATE, or, maximum number of seconds per update?
+			updateIterations = MAX_CYCLES_PER_FRAME * UPDATE_INTERVAL;
 		}
 
-		// Calculate time since last frame was drawn
-		time_gap = SDL_GetTicks() - last_tick;
-		last_tick = SDL_GetTicks();
+		// If the time since the last frame redraw is small, don't update the game, otherwise update the game state one or more times
+		while(updateIterations > UPDATE_INTERVAL){
+			updateIterations -= UPDATE_INTERVAL;
 
-		// Clear and redraw the screen for each frame
-		glClear(GL_COLOR_BUFFER_BIT);
+			// Check event queue, collect user input
+			if(SDL_PollEvent(&event)){
+				if(event.type == SDL_MOUSEBUTTONDOWN){
+					mouseX = event.button.x;
+					mouseY = event.button.y;
+				}
+				else if(event.type == SDL_QUIT)
+					quit = true;
+			}
 
-		redraw(time_gap);
+			// Update the game state
+			tick();
+		}
 
+		cyclesLeftOver = updateIterations;
+		lastFrameTime = SDL_GetTicks();
+
+		redraw();
 		SDL_GL_SwapBuffers();
 	}
 
