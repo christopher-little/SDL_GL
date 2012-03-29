@@ -34,21 +34,6 @@ GLfloat controlPoints[4][3]={
 
 
 
-void drawSquare(GLfloat x, GLfloat y, GLfloat w=50.0f, GLfloat h=50.0f){
-	GLfloat _w = w/2;
-	GLfloat _h = h/2;
-	glBegin(GL_QUADS);
-		glColor3f(1.0f,0.5f,0);
-		glVertex3f(x-_w, y-_h, 0);
-
-		glVertex3f(x+_w, y-_h, 0);
-
-		glVertex3f(x+_w, y+_h, 0);
-
-		glVertex3f(x-_w, y+_h, 0);
-	glEnd();
-}
-
 // Redraws the screen given the amount of time since the last frame
 void redraw(Uint32 time_gap){
 	// Draw a triangle and a square
@@ -143,6 +128,8 @@ void redraw(Uint32 time_gap){
 }
 
 
+
+
 int main(int argc, char **argv) {
 	if(SDL_Init(SDL_INIT_EVERYTHING) == -1){
 		cout << "Couldn't initialize SDL: " << SDL_GetError() << endl;
@@ -157,8 +144,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	//SDL_FillRect(screen, &screen->clip_rect, SDL_MapRGB(screen->format, 0xFF,0xFF,0));
-	//SDL_Flip(screen);
 
 	// Create an orthographic projection such that origin (0,0) is top-left
 	glClearColor(1.0f, 1.0f, 0, 0);
@@ -169,6 +154,8 @@ int main(int argc, char **argv) {
 	glOrtho(0, 640, 480, 0, -1.0f, 1.0f);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	
+	glDisable(GL_DEPTH_TEST);
 
 
 
