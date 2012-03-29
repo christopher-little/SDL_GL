@@ -19,6 +19,11 @@ static GLuint texID; // Texture index identifier for the texture I'll be renderi
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
 
+static GLfloat squareX = 300.0f; // Position
+static GLfloat squareY = 100.0f;
+static GLfloat squareV = 50.0f; // Velocity (pixels per second
+
+
 // Bezier curve control points
 GLfloat controlPoints[4][3]={
 	{100.0f, 100.0f, 0},
@@ -44,7 +49,8 @@ void drawSquare(GLfloat x, GLfloat y, GLfloat w=50.0f, GLfloat h=50.0f){
 	glEnd();
 }
 
-void redraw(){
+// Redraws the screen given the amount of time since the last frame
+void redraw(Uint32 time_gap){
 	// Draw a triangle and a square
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f,0,1.0f);
@@ -55,22 +61,30 @@ void redraw(){
 		glVertex3f(375.0f, 400.0f, 0);
 	glEnd();
 
+
+	// If the time gap (time since last frame redraw) is not 0, calculate the new position of the square
+	if(time_gap != 0)
+		squareX += squareV*(time_gap/1000.0f);
+	// Draw the square at its new position
+	glPushMatrix();
+	glTranslatef(squareX, squareY, 0);
 	glBegin(GL_QUADS);
 		glColor3f(0.0f,1.0f,1.0f);
-		glVertex3f(300.0f, 100.0f, 0);
+		glVertex3f(0.0f, 0.0f, 0);
 
-		glVertex3f(450.0f, 100.0f, 0);
+		glVertex3f(150.0f, 0.0f, 0);
 
-		glVertex3f(450.0f, 250.0f, 0);
+		glVertex3f(150.0f, 150.0f, 0);
 
-		glVertex3f(300.0f, 250.0f, 0);
+		glVertex3f(0.0f, 150.0f, 0);
 	glEnd();
+	glPopMatrix();
 
 	// Draw a square centered at the mouse pointer
 	glPushMatrix();
 	glTranslatef(mouseX-25.0f,mouseY-25.0f, 0);
 	glBegin(GL_QUADS);
-		glColor3f(0.0f,1.0f,1.0f);
+		glColor3f(1.0f,0.0f,0.0f);
 		glVertex3f(0, 0, 0);
 
 		glVertex3f(0, 50.0f, 0);
@@ -215,7 +229,7 @@ int main(int argc, char **argv) {
 
 
 	// Draw the scene to start off
-	redraw();
+	redraw(0);
 
 	SDL_GL_SwapBuffers();
 
@@ -223,6 +237,8 @@ int main(int argc, char **argv) {
 
 	bool quit=false;
 	SDL_Event event;
+	Uint32 last_tick=0;
+	Uint32 time_gap=0;
 
 	while(quit == false){
 		if(SDL_PollEvent(&event)){
@@ -234,10 +250,14 @@ int main(int argc, char **argv) {
 				quit = true;
 		}
 
+		// Calculate time since last frame was drawn
+		time_gap = SDL_GetTicks() - last_tick;
+		last_tick = SDL_GetTicks();
+
 		// Clear and redraw the screen for each frame
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		redraw();
+		redraw(time_gap);
 
 		SDL_GL_SwapBuffers();
 	}
