@@ -1,5 +1,5 @@
 CC=g++
-exe=bezier
+exe=engine
 
 #Detect a mingw32 (windows 32 bit) environment, otherwise assume linux for now
 UNAME := $(shell uname)
@@ -13,11 +13,11 @@ else
 	libs=-lSDL -lGL
 endif
 
-all: bezier.o
-	$(CC) -o $(exe) bezier.o $(libs)
+all: main.o
+	$(CC) -o $(exe) main.o $(libs)
 
-bezier.o: bezier.cpp
-	$(CC) -c bezier.cpp $(include)
+main.o: main.cpp
+	$(CC) -c main.cpp $(include)
 
 clean:
 	rm -f $(exe)
