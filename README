@@ -1,0 +1,8 @@
+Build requirements:
+	SDL
+	SDL_image
+	OpenGL
+
+Run requirements:
+	SDL runtime library
+	OpenGL compatible display device

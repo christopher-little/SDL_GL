@@ -7,10 +7,10 @@ UNAME := $(shell uname)
 ifeq ($(UNAME),MINGW32_NT-6.1)
 	exe:=$(exe).exe
 	include=-Ic:/SDL-1.2.15/include
-	libs=-Lc:/SDL-1.2.15/lib -lmingw32 -lSDLmain -lSDL -lopengl32
+	libs=-Lc:/SDL-1.2.15/lib -lmingw32 -lSDLmain -lSDL -lSDL_image -lopengl32
 else
 	include=
-	libs=-lSDL -lGL
+	libs=-lSDL -lSDL_image -lGL
 endif
 
 all: main.o

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <ctime>
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include <SDL/SDL_opengl.h>
 using namespace std;
 
@@ -20,7 +21,7 @@ const static double MAX_CYCLES_PER_FRAME = MAXIMUM_TICK_RATE/MINIMUM_FRAME_RATE;
 
 
 static GLuint listIndex; // Index of the display list I'm using
-static GLuint texID; // Texture index identifier for the texture I'll be rendering
+static GLuint texID[2]; // Texture index identifier for the texture I'll be rendering
 
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
@@ -121,7 +122,7 @@ void redraw(){
 
 	// Draw a textured square
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, texID);
+	glBindTexture(GL_TEXTURE_2D, texID[1]);
 
 	glColor3f(0.0f,1.0f,0.0f);
 	glBegin(GL_QUADS);
@@ -133,6 +134,15 @@ void redraw(){
 		glVertex2f(314.0f, 464.0f);
 		glTexCoord2f(0.0,1.0);
 		glVertex2f(250.0f, 464.0f);
+
+		glTexCoord2f(0.0,0.0);
+		glVertex2f(314.0f,400.0f);
+		glTexCoord2f(1.0,0.0);
+		glVertex2f(378.0f, 400.0f);
+		glTexCoord2f(1.0,1.0);
+		glVertex2f(378.0f, 464.0f);
+		glTexCoord2f(0.0,1.0);
+		glVertex2f(314.0f, 464.0f);
 	glEnd();
 
 	glDisable(GL_TEXTURE_2D);
@@ -196,30 +206,97 @@ int main(int argc, char **argv) {
 
 
 
-	// Enable texture mapping
-	glEnable(GL_TEXTURE_2D);
 	// Lets try texture mapping something...
-	srand(time(NULL));
+	glEnable(GL_TEXTURE_2D);
+
+	// Generate 2 textures
+	glGenTextures(2, texID);
+
+
+	// Generate random texture data
 	int texWidth = 64;
 	int texHeight = 64;
-	// Generate random texture data
+	srand(time(NULL));
 	GLubyte imageData[texWidth*texHeight*3];
 	for(int i=0; i<texWidth*texHeight*3; i++){
 		imageData[i] = GLubyte(rand() % 256);
 	}
 
-	glGenTextures(1, &texID);
-	glBindTexture(GL_TEXTURE_2D, texID);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindTexture(GL_TEXTURE_2D, texID[0]);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// Pixels are read in byte-order
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	// Pixel colour value is colour value determined from texture without modulation/lighting
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+	// Copy the randomly generated RGB data to the texture object
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+
+
+
+	// Create a texture from an SDL surface
+	glBindTexture(GL_TEXTURE_2D, texID[1]);
+
+	SDL_Surface *texSurface = IMG_Load("assets/tiles.png");
+	if(texSurface == NULL){
+		cout << "Couldn't load image" << endl;
+	}
+
+	GLenum texFormat;
+	GLint nColors;
+
+	nColors = texSurface->format->BytesPerPixel;
+	if(nColors == 4){
+		if(texSurface->format->Rmask == 0x000000ff){
+			texFormat = GL_RGBA;
+		}
+		else{
+			texFormat = GL_BGRA;
+		}
+	}
+	else if(nColors == 3){
+		if(texSurface->format->Rmask == 0x000000ff){
+			texFormat = GL_RGB;
+		}
+		else{
+			texFormat = GL_BGR;
+		}
+	}
+	else{
+		// This isn't a true color image format...
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+	// Cut out the piece of the tile sheet to be displayed and blit it to a new surface
+	SDL_Surface *tileGraphic =
+			SDL_CreateRGBSurface(
+					texSurface->flags,
+					64,
+					64,
+					texSurface->format->BitsPerPixel,
+					texSurface->format->Rmask,
+					texSurface->format->Gmask,
+					texSurface->format->Bmask,
+					texSurface->format->Amask);
+	SDL_Rect tileRect;
+	tileRect.x=0;
+	tileRect.y=0;
+	tileRect.w=64;
+	tileRect.h=64;
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+	SDL_FillRect(tileGraphic, NULL, SDL_MapRGB(tileGraphic->format,0xFF,0x00,0xFF));
+	SDL_BlitSurface(texSurface, &tileRect, tileGraphic, NULL);
+
+	//glTexImage2D(GL_TEXTURE_2D, 0, nColors, texSurface->w, texSurface->h, 0, texFormat, GL_UNSIGNED_BYTE, texSurface->pixels);
+	glTexImage2D(GL_TEXTURE_2D, 0, nColors, tileGraphic->w, tileGraphic->h, 0, texFormat, GL_UNSIGNED_BYTE, tileGraphic->pixels);
+
+	// Clean up the loaded texture data
+	SDL_FreeSurface(texSurface); //***Will need to keep this data so all tiles can be loaded when needed... or should they be stored in video memory...
+	SDL_FreeSurface(tileGraphic);
+
 
 	// Disable texturing so it isn't drawn on EVERY surface
 	glDisable(GL_TEXTURE_2D);
