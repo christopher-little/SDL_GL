@@ -1,0 +1,8 @@
+A Game class that handles the game loop
+
+A Renderer class that handles drawing all the game assets
+
+An Entity class, an object that can be positioned and drawn. Need collision detection built in?
+	Subsystems for animation, control input, sound output?
+
+A Scene/World class that specifies a background (tiled?), or a list of entities (including background?), and a possible menu/HUD overlay
