@@ -1,5 +1,7 @@
 CC=g++
 exe=engine
+src=src
+bin=bin
 
 #Detect a mingw32 (windows 32 bit) environment, otherwise assume linux for now
 UNAME := $(shell uname)
@@ -13,13 +15,13 @@ else
 	libs=-lSDL -lSDL_image -lGL
 endif
 
-all: main.o
-	$(CC) -o $(exe) main.o $(libs)
+all: $(bin)/main.o
+	$(CC) -o $(exe) $(bin)/main.o $(libs)
 
-main.o: main.cpp
-	$(CC) -c main.cpp $(include)
+$(bin)/main.o: $(src)/main.cpp
+	$(CC) -o $(bin)/main.o -c $(src)/main.cpp $(include)
 
 clean:
 	rm -f $(exe)
-	rm -f *.o
+	rm -f $(bin)/*.o
 
