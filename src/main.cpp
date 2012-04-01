@@ -21,7 +21,9 @@ const static double MAX_CYCLES_PER_FRAME = MAXIMUM_TICK_RATE/MINIMUM_FRAME_RATE;
 
 
 static GLuint listIndex; // Index of the display list I'm using
-static GLuint texID[2]; // Texture index identifier for the texture I'll be rendering
+
+static GLuint tileListIndex; // Display list for a tile sprite
+static GLuint tileTexID; // Texture index identifier for the texture I'll be rendering
 
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
@@ -120,30 +122,18 @@ void redraw(){
 
 
 
-	// Draw a textured square
+	// Draw the textured tiles
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, texID[1]);
+	glBindTexture(GL_TEXTURE_2D, tileTexID);
 
-	glColor3f(0.0f,1.0f,0.0f);
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0,0.0);
-		glVertex2f(250.0f,400.0f);
-		glTexCoord2f(1.0,0.0);
-		glVertex2f(314.0f, 400.0f);
-		glTexCoord2f(1.0,1.0);
-		glVertex2f(314.0f, 464.0f);
-		glTexCoord2f(0.0,1.0);
-		glVertex2f(250.0f, 464.0f);
-
-		glTexCoord2f(0.0,0.0);
-		glVertex2f(314.0f,400.0f);
-		glTexCoord2f(1.0,0.0);
-		glVertex2f(378.0f, 400.0f);
-		glTexCoord2f(1.0,1.0);
-		glVertex2f(378.0f, 464.0f);
-		glTexCoord2f(0.0,1.0);
-		glVertex2f(314.0f, 464.0f);
-	glEnd();
+	glPushMatrix();
+	glTranslatef(250.0f, 400.0f, 0);
+	glCallList(tileListIndex);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslatef(314.0f, 400.0f, 0);
+	glCallList(tileListIndex);
+	glPopMatrix();
 
 	glDisable(GL_TEXTURE_2D);
 }
@@ -166,7 +156,7 @@ int main(int argc, char **argv) {
 	}
 
 
-	// Create an orthographic projection such that origin (0,0) is top-left
+	// Use an orthographic projection such that origin (0,0) is top-left
 	glClearColor(1.0f, 1.0f, 0, 0);
 	glViewport(0,0,640,480);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -206,45 +196,52 @@ int main(int argc, char **argv) {
 
 
 
+	// Create a display list for the tile
+	tileListIndex = glGenLists(1);
+	if(listIndex == 0){
+		cout << "List failed" << endl;
+		return 1;
+	}
+
+	glNewList(tileListIndex, GL_COMPILE);
+		glBegin(GL_QUADS);
+			glTexCoord2f(0.0,0.0);
+			glVertex2f(0.0f,0.0f);
+			glTexCoord2f(1.0,0.0);
+			glVertex2f(64.0f, 0.0f);
+			glTexCoord2f(1.0,1.0);
+			glVertex2f(64.0f, 64.0f);
+			glTexCoord2f(0.0,1.0);
+			glVertex2f(0.0f, 64.0f);
+		glEnd();
+	glEndList();
+
+
+
 	// Lets try texture mapping something...
 	glEnable(GL_TEXTURE_2D);
 
-	// Generate 2 textures
-	glGenTextures(2, texID);
+	// Generate a texture for the "dirt/grass" tile
+	glGenTextures(1, &tileTexID);
+	glBindTexture(GL_TEXTURE_2D, tileTexID);
 
-
-	// Generate random texture data
-	int texWidth = 64;
-	int texHeight = 64;
-	srand(time(NULL));
-	GLubyte imageData[texWidth*texHeight*3];
-	for(int i=0; i<texWidth*texHeight*3; i++){
-		imageData[i] = GLubyte(rand() % 256);
-	}
-
-	glBindTexture(GL_TEXTURE_2D, texID[0]);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	// Pixel colour is determined directly from texture (no lighting/modulation)
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	// Pixels are read in byte-order
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	// Pixel colour value is colour value determined from texture without modulation/lighting
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
-	// Copy the randomly generated RGB data to the texture object
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 
 
-	// Create a texture from an SDL surface
-	glBindTexture(GL_TEXTURE_2D, texID[1]);
+	// Load in the tile set to an SDL surface using SDL_image
+	GLenum texFormat;
+	GLint nColors;
 
 	SDL_Surface *texSurface = IMG_Load("assets/tiles.png");
 	if(texSurface == NULL){
 		cout << "Couldn't load image" << endl;
 	}
-
-	GLenum texFormat;
-	GLint nColors;
 
 	nColors = texSurface->format->BytesPerPixel;
 	if(nColors == 4){
@@ -267,10 +264,7 @@ int main(int argc, char **argv) {
 		// This isn't a true color image format...
 	}
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	// Cut out the piece of the tile sheet to be displayed and blit it to a new surface
+	// Blit the required part of the tile set onto another SDL surface (***This seems kind of lame...)
 	SDL_Surface *tileGraphic =
 			SDL_CreateRGBSurface(
 					texSurface->flags,
@@ -290,15 +284,14 @@ int main(int argc, char **argv) {
 	SDL_FillRect(tileGraphic, NULL, SDL_MapRGB(tileGraphic->format,0xFF,0x00,0xFF));
 	SDL_BlitSurface(texSurface, &tileRect, tileGraphic, NULL);
 
-	//glTexImage2D(GL_TEXTURE_2D, 0, nColors, texSurface->w, texSurface->h, 0, texFormat, GL_UNSIGNED_BYTE, texSurface->pixels);
+	// Load the SDL surface pixel data into opengl video/texture memory
 	glTexImage2D(GL_TEXTURE_2D, 0, nColors, tileGraphic->w, tileGraphic->h, 0, texFormat, GL_UNSIGNED_BYTE, tileGraphic->pixels);
 
-	// Clean up the loaded texture data
+	// Clean up the SDL surface data
 	SDL_FreeSurface(texSurface); //***Will need to keep this data so all tiles can be loaded when needed... or should they be stored in video memory...
 	SDL_FreeSurface(tileGraphic);
 
-
-	// Disable texturing so it isn't drawn on EVERY surface
+	// Disable texturing for now until it's needed again (if left enabled, any shapes drawn with glColor... use texture data instead)
 	glDisable(GL_TEXTURE_2D);
 
 
