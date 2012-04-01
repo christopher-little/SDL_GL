@@ -139,7 +139,8 @@ void redraw(){
 }
 
 
-
+// This is bizarre, but gets rid of that WinMain linker error nonsense
+#undef main
 
 int main(int argc, char **argv) {
 	if(SDL_Init(SDL_INIT_EVERYTHING) == -1){
