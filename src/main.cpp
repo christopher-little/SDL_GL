@@ -46,7 +46,20 @@ GLfloat controlPoints[4][3]={
 
 
 
+//============================================================================
+// State update and graphics redraw declarations
+//============================================================================
+
 // Update the game state
+void tick();
+
+// Redraws the screen given the amount of time since the last frame
+void redraw();
+
+
+
+
+
 void tick(){
     squareX += squareV*(UPDATE_INTERVAL/1000.0);
 
@@ -54,7 +67,7 @@ void tick(){
 }
 
 
-// Redraws the screen given the amount of time since the last frame
+
 void redraw(){
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -151,14 +164,15 @@ void redraw(){
         glColor3f(0.5f,0.1f,0.1f);
         glVertex3f(0.0f, 0.0f, 0);
 
-        glVertex3f(25.0f, 0.0f, 0);
+        glVertex3f(32.0f, 0.0f, 0);
 
-        glVertex3f(25.0f, 25.0f, 0);
+        glVertex3f(32.0f, 32.0f, 0);
 
-        glVertex3f(0.0f, 25.0f, 0);
+        glVertex3f(0.0f, 32.0f, 0);
     glEnd();
     glPopMatrix();
 }
+
 
 
 
@@ -229,16 +243,16 @@ int main(int argc, char **argv) {
     }
 
     glNewList(tileListIndex, GL_COMPILE);
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0,0.0);
-            glVertex2f(0.0f,0.0f);
-            glTexCoord2f(1.0,0.0);
-            glVertex2f(64.0f, 0.0f);
-            glTexCoord2f(1.0,1.0);
-            glVertex2f(64.0f, 64.0f);
-            glTexCoord2f(0.0,1.0);
-            glVertex2f(0.0f, 64.0f);
-        glEnd();
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0,0.0);
+        glVertex2f(0.0f,0.0f);
+        glTexCoord2f(1.0,0.0);
+        glVertex2f(64.0f, 0.0f);
+        glTexCoord2f(1.0,1.0);
+        glVertex2f(64.0f, 64.0f);
+        glTexCoord2f(0.0,1.0);
+        glVertex2f(0.0f, 64.0f);
+    glEnd();
     glEndList();
 
 
