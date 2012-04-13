@@ -3,4 +3,5 @@ bezier
 *.o
 .cproject
 .project
+*.user
 SDL.dll
