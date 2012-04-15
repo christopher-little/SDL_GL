@@ -10,8 +10,7 @@ DEPENDPATH += . src
 INCLUDEPATH += .
 
 win32{
-    INCLUDEPATH += c:/SDL/include
-    LIBS += -Lc:/SDL/lib -lopengl32
+    LIBS += -lopengl32
 }
 unix{
     LIBS += -lGL

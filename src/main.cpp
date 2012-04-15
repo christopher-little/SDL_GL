@@ -19,6 +19,11 @@ const static double UPDATE_INTERVAL = 1000.0/MAXIMUM_TICK_RATE; // Time (in Seco
 const static double MAX_CYCLES_PER_FRAME = MAXIMUM_TICK_RATE/MINIMUM_FRAME_RATE; // The maximum number of game state updates per frame before update frequency must slow
 
 
+// SDL display and input controls
+SDL_Surface *screen = NULL;
+
+
+// OpenGL drawing control values
 static GLuint listIndex; // Index of the display list I'm using
 
 static GLuint tileListIndex; // Display list for a tile sprite
@@ -46,15 +51,18 @@ GLfloat controlPoints[4][3]={
 
 
 
-//============================================================================
+//==============================================================================
 // State update and graphics redraw declarations
-//============================================================================
+//==============================================================================
 
 // Update the game state
 void tick();
 
 // Redraws the screen given the amount of time since the last frame
 void redraw();
+
+// Creates an SDL display surface with an OpenGL rendering context
+int gfxInit();
 
 
 
@@ -71,14 +79,14 @@ void tick(){
 void redraw(){
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Draw a triangle and a square
+    // Draw a triangle
     glBegin(GL_TRIANGLES);
         glColor3f(1.0f,0,1.0f);
-        glVertex3f(300.0f, 300.0f, 0);
+        glVertex2f(300.0f, 400.0f);
 
-        glVertex3f(450.0f, 300.0f, 0);
+        glVertex2f(450.0f, 400.0f);
 
-        glVertex3f(375.0f, 400.0f, 0);
+        glVertex2f(375.0f, 500.0f);
     glEnd();
 
 
@@ -87,13 +95,13 @@ void redraw(){
     glTranslatef(squareX, squareY, 0);
     glBegin(GL_QUADS);
         glColor3f(0.0f,1.0f,1.0f);
-        glVertex3f(0.0f, 0.0f, 0);
+        glVertex2f(0.0f, 0.0f);
 
-        glVertex3f(150.0f, 0.0f, 0);
+        glVertex2f(150.0f, 0.0f);
 
-        glVertex3f(150.0f, 150.0f, 0);
+        glVertex2f(150.0f, 150.0f);
 
-        glVertex3f(0.0f, 150.0f, 0);
+        glVertex2f(0.0f, 150.0f);
     glEnd();
     glPopMatrix();
 
@@ -102,13 +110,13 @@ void redraw(){
     glTranslatef(mouseX-25.0f,mouseY-25.0f, 0);
     glBegin(GL_QUADS);
         glColor3f(1.0f,0.0f,0.0f);
-        glVertex3f(0, 0, 0);
+        glVertex2f(0, 0);
 
-        glVertex3f(0, 50.0f, 0);
+        glVertex2f(0, 50.0f);
 
-        glVertex3f(50.0f, 50.0f, 0);
+        glVertex2f(50.0f, 50.0f);
 
-        glVertex3f(50.0f, 0, 0);
+        glVertex2f(50.0f, 0);
     glEnd();
     glPopMatrix();
 
@@ -140,6 +148,7 @@ void redraw(){
 
 
 
+    glColor4f(1.0,1.0,1.0,1.0);
     // Draw the textured tiles
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, tileTexID);
@@ -162,37 +171,32 @@ void redraw(){
     glTranslatef(playerPos, 300.0f, 0);
     glBegin(GL_QUADS);
         glColor3f(0.5f,0.1f,0.1f);
-        glVertex3f(0.0f, 0.0f, 0);
+        glVertex2f(0.0f, 0.0f);
 
-        glVertex3f(32.0f, 0.0f, 0);
+        glVertex2f(32.0f, 0.0f);
 
-        glVertex3f(32.0f, 32.0f, 0);
+        glVertex2f(32.0f, 32.0f);
 
-        glVertex3f(0.0f, 32.0f, 0);
+        glVertex2f(0.0f, 32.0f);
     glEnd();
     glPopMatrix();
 }
 
 
 
-
-
-// This is bizarre, but gets rid of that WinMain linker error nonsense
-#undef main
-
-int main(int argc, char **argv) {
+int gfxInit(){
     if(SDL_Init(SDL_INIT_EVERYTHING) == -1){
         cout << "Couldn't initialize SDL: " << SDL_GetError() << endl;
         return 1;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    SDL_Surface *screen = SDL_SetVideoMode(640,480,32,SDL_OPENGL);
+    screen = SDL_SetVideoMode(640,480,32,SDL_OPENGL);
     if(screen == NULL){
         cout << "Couldn't create video screen surface: " << SDL_GetError() << endl;
         return 1;
     }
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 
     // Use an orthographic projection such that origin (0,0) is top-left
@@ -207,8 +211,24 @@ int main(int argc, char **argv) {
 
     glDisable(GL_DEPTH_TEST);
 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+
+    return 0;
+}
 
 
+
+
+
+#undef main// This is bizarre, but gets rid of that WinMain/qMain linker error nonsense
+
+int main(int argc, char **argv) {
+
+    if(gfxInit() > 0){
+        cout << "gfxInit() failed!" << endl;
+        return 1;
+    }
 
     // Create a display list
     listIndex = glGenLists(1);
@@ -265,7 +285,7 @@ int main(int argc, char **argv) {
     glBindTexture(GL_TEXTURE_2D, tileTexID);
 
     // Pixel colour is determined directly from texture (no lighting/modulation)
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     // Pixels are read in byte-order
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
@@ -324,13 +344,14 @@ int main(int argc, char **argv) {
     SDL_BlitSurface(texSurface, &tileRect, tileGraphic, NULL);
 
     // Load the SDL surface pixel data into opengl video/texture memory
-    glTexImage2D(GL_TEXTURE_2D, 0, nColors, tileGraphic->w, tileGraphic->h, 0, texFormat, GL_UNSIGNED_BYTE, tileGraphic->pixels);
+    //glTexImage2D(GL_TEXTURE_2D, 0, nColors, tileGraphic->w, tileGraphic->h, 0, texFormat, GL_UNSIGNED_BYTE, tileGraphic->pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, nColors, texSurface->w, texSurface->h, 0, texFormat, GL_UNSIGNED_BYTE, texSurface->pixels);
 
     // Clean up the SDL surface data
-    SDL_FreeSurface(texSurface); //***Will need to keep this data so all tiles can be loaded when needed... or should they be stored in video memory...
+    SDL_FreeSurface(texSurface);
     SDL_FreeSurface(tileGraphic);
 
-    // Disable texturing for now until it's needed again (if left enabled, any shapes drawn with glColor... use texture data instead)
+    // Disable texturing for now until it's needed again (if left enabled, any shapes drawn use texture data instead)
     glDisable(GL_TEXTURE_2D);
 
 
