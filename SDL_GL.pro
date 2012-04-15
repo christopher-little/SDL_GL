@@ -19,5 +19,7 @@ unix{
 LIBS += -lSDL -lSDL_image
 
 # Input
-HEADERS += src/Entity.h
-SOURCES += src/Entity.cpp src/main.cpp
+HEADERS += src/Entity.h \
+    src/tilesheet.h
+SOURCES += src/Entity.cpp src/main.cpp \
+    src/tilesheet.cpp
