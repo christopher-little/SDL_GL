@@ -20,6 +20,6 @@ LIBS += -lSDL -lSDL_image
 
 # Input
 HEADERS += src/Entity.h \
-    src/tilesheet.h
+    src/tilegrid.h
 SOURCES += src/Entity.cpp src/main.cpp \
-    src/tilesheet.cpp
+    src/tilegrid.cpp
