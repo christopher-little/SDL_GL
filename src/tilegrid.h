@@ -3,15 +3,15 @@
 
 #include <SDL/SDL_opengl.h>
 
-static int tileSize = 32;
-
 class Tilegrid
 {
 public:
-    Tilegrid();
+    Tilegrid(int width, int height);
 
 private:
-    int tiles[(640/tileSize) * (480/tileSize)];
+    int width;
+    int height;
+    int *tiles;
 };
 
 #endif // TILEGRID_H
