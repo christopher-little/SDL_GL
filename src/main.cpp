@@ -29,6 +29,8 @@ static GLuint listIndex; // Index of the display list I'm using
 static GLuint tileListIndex; // Display list for a tile sprite
 static GLuint tileTexID; // Texture index identifier for the texture I'll be rendering
 
+static GLuint tileSize = 32; // Width and height of a tile in pixels
+
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
 
@@ -153,14 +155,27 @@ void redraw(){
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, tileTexID);
 
-    glPushMatrix();
-    glTranslatef(250.0f, 400.0f, 0);
-    glCallList(tileListIndex);
-    glPopMatrix();
-    glPushMatrix();
-    glTranslatef(314.0f, 400.0f, 0);
-    glCallList(tileListIndex);
-    glPopMatrix();
+    for(unsigned int i=0; i<640/tileSize; i++){
+        glPushMatrix();
+        glTranslated(i*tileSize, 416.0, 0);
+        glCallList(tileListIndex);
+        glPopMatrix();
+    }
+    for(unsigned int i=0; i<640/tileSize; i++){
+        for(unsigned int j=0; j<2; j++){
+            glPushMatrix();
+            glTranslated(i*tileSize, 448.0 + j*tileSize, 0);
+            glCallList(tileListIndex);
+            glPopMatrix();
+        }
+    }
+
+    for(unsigned int i=0; i<480/tileSize; i++){
+        glPushMatrix();
+        glTranslated(576.0, i*tileSize, 0);
+        glCallList(tileListIndex);
+        glPopMatrix();
+    }
 
     glDisable(GL_TEXTURE_2D);
 
@@ -265,13 +280,13 @@ int main(int argc, char **argv) {
     glNewList(tileListIndex, GL_COMPILE);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0,0.0);
-        glVertex2f(0.0f,0.0f);
-        glTexCoord2f(1.0,0.0);
-        glVertex2f(64.0f, 0.0f);
-        glTexCoord2f(1.0,1.0);
-        glVertex2f(64.0f, 64.0f);
-        glTexCoord2f(0.0,1.0);
-        glVertex2f(0.0f, 64.0f);
+        glVertex2f(0.0,0.0);
+        glTexCoord2f((1.0/8.0),0.0);
+        glVertex2f(tileSize, 0.0);
+        glTexCoord2f((1.0/8.0),(1.0/8.0));
+        glVertex2f(tileSize, tileSize);
+        glTexCoord2f(0.0,(1.0/8.0));
+        glVertex2f(0.0, tileSize);
     glEnd();
     glEndList();
 
@@ -324,32 +339,32 @@ int main(int argc, char **argv) {
     }
 
     // Blit the required part of the tile set onto another SDL surface (***This seems kind of lame...)
-    SDL_Surface *tileGraphic =
-            SDL_CreateRGBSurface(
-                    texSurface->flags,
-                    64,
-                    64,
-                    texSurface->format->BitsPerPixel,
-                    texSurface->format->Rmask,
-                    texSurface->format->Gmask,
-                    texSurface->format->Bmask,
-                    texSurface->format->Amask);
-    SDL_Rect tileRect;
-    tileRect.x=0;
-    tileRect.y=0;
-    tileRect.w=64;
-    tileRect.h=64;
+//    SDL_Surface *tileGraphic =
+//            SDL_CreateRGBSurface(
+//                    texSurface->flags,
+//                    64,
+//                    64,
+//                    texSurface->format->BitsPerPixel,
+//                    texSurface->format->Rmask,
+//                    texSurface->format->Gmask,
+//                    texSurface->format->Bmask,
+//                    texSurface->format->Amask);
+//    SDL_Rect tileRect;
+//    tileRect.x=0;
+//    tileRect.y=0;
+//    tileRect.w=64;
+//    tileRect.h=64;
 
-    SDL_FillRect(tileGraphic, NULL, SDL_MapRGB(tileGraphic->format,0xFF,0x00,0xFF));
-    SDL_BlitSurface(texSurface, &tileRect, tileGraphic, NULL);
+//    SDL_FillRect(tileGraphic, NULL, SDL_MapRGB(tileGraphic->format,0xFF,0x00,0xFF));
+//    SDL_BlitSurface(texSurface, &tileRect, tileGraphic, NULL);
 
     // Load the SDL surface pixel data into opengl video/texture memory
     //glTexImage2D(GL_TEXTURE_2D, 0, nColors, tileGraphic->w, tileGraphic->h, 0, texFormat, GL_UNSIGNED_BYTE, tileGraphic->pixels);
     glTexImage2D(GL_TEXTURE_2D, 0, nColors, texSurface->w, texSurface->h, 0, texFormat, GL_UNSIGNED_BYTE, texSurface->pixels);
 
     // Clean up the SDL surface data
-    SDL_FreeSurface(texSurface);
-    SDL_FreeSurface(tileGraphic);
+//  SDL_FreeSurface(texSurface);
+//  SDL_FreeSurface(tileGraphic);
 
     // Disable texturing for now until it's needed again (if left enabled, any shapes drawn use texture data instead)
     glDisable(GL_TEXTURE_2D);
