@@ -21,8 +21,10 @@ const static double UPDATE_INTERVAL = 1000.0/MAXIMUM_TICK_RATE; // Time (in Seco
 const static double MAX_CYCLES_PER_FRAME = MAXIMUM_TICK_RATE/MINIMUM_FRAME_RATE; // The maximum number of game state updates per frame before update frequency must slow
 
 
-// SDL display and input controls
+// Display properties
 SDL_Surface *screen = NULL;
+const static unsigned int screen_width = 640;
+const static unsigned int screen_height = 480;
 
 
 // OpenGL drawing control values
@@ -56,13 +58,18 @@ const static int tileTypesListSize=64;
 static Tile tileTypesList[tileTypesListSize]; // Array of tile type objects
 
 // Width and height of the tilesheet image in pixels
-const static int tilesheet_w = 512;
-const static int tilesheet_h = 512;
+const static unsigned int tilesheet_w = 512;
+const static unsigned int tilesheet_h = 512;
 // Width and height of each tile in pixels within the tilesheet image
-const static int tilesheet_icon_w = 64;
-const static int tilesheet_icon_h = 64;
+const static unsigned int tilesheet_icon_w = 64;
+const static unsigned int tilesheet_icon_h = 64;
 
-const static GLuint tileSize = 32; // Width and height of a displayed tile in pixels
+const static GLuint tile_size = 32; // Width and height of a displayed tile in pixels
+
+// Width and height of tile grid in number of tiles
+const static unsigned int tile_grid_w = screen_width/tile_size;
+const static unsigned int tile_grid_h = screen_height/tile_size;
+static TileType tile_grid[tile_grid_w*tile_grid_h]; // Specify tile type for each tile appearing in the world
 
 
 
@@ -92,6 +99,9 @@ void loadSDLSurfaceToTexture(GLuint texID);
 
 // Draw a tile at the given grid location with a given GL texture ID (tileset texture) and tile type (NOTE: assumes the tilesheet texture has already been enabled/bound)
 void drawTile(int grid_x, int grid_y, TileType type);
+
+// Render the tile grid making up the world
+void drawTileGrid();
 
 // Redraws the screen given the amount of time since the last frame
 void redraw();
@@ -179,16 +189,16 @@ void drawTile(int grid_x, int grid_y, TileType type){
     Tile tileType = tileTypesList[type];
 
     glPushMatrix();
-    glTranslated(grid_x*tileSize, grid_y*tileSize, 0);
+    glTranslated(grid_x*tile_size, grid_y*tile_size, 0);
     glBegin(GL_QUADS);
         glTexCoord2f(tileType.u,tileType.v);
         glVertex2f(0.0,0.0);
         glTexCoord2f(tileType.u+tileType.d_u,tileType.v);
-        glVertex2f(tileSize, 0.0);
+        glVertex2f(tile_size, 0.0);
         glTexCoord2f(tileType.u+tileType.d_u,tileType.v+tileType.d_v);
-        glVertex2f(tileSize, tileSize);
+        glVertex2f(tile_size, tile_size);
         glTexCoord2f(tileType.u,tileType.v+tileType.d_v);
-        glVertex2f(0.0, tileSize);
+        glVertex2f(0.0, tile_size);
 
         /*
         glTexCoord2f(0.0,0.0);
@@ -203,6 +213,21 @@ void drawTile(int grid_x, int grid_y, TileType type){
     glEnd();
     glPopMatrix();
 }
+
+
+
+
+void drawTileGrid(){
+    for(unsigned int x=0; x<tile_grid_w; x++)
+        for(unsigned int y=0; y<tile_grid_h; y++){
+            // Skip drawing if the tile is 'air' type
+            if(tile_grid[y*tile_grid_w + x] == air)
+                continue;
+
+            drawTile(x,y,tile_grid[y*tile_grid_w + x]);
+        }
+}
+
 
 
 
@@ -283,27 +308,32 @@ void redraw(){
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, tileTexID);
 
-    for(unsigned int i=0; i<640/tileSize; i++){
+    /*
+    for(unsigned int i=0; i<640/tile_size; i++){
         glPushMatrix();
-        glTranslated(i*tileSize, 416.0, 0);
+        glTranslated(i*tile_size, 416.0, 0);
         glCallList(tileListIndex);
         glPopMatrix();
     }
-    for(unsigned int i=0; i<640/tileSize; i++){
+    for(unsigned int i=0; i<640/tile_size; i++){
         for(unsigned int j=0; j<2; j++){
             glPushMatrix();
-            glTranslated(i*tileSize, 448.0 + j*tileSize, 0);
+            glTranslated(i*tile_size, 448.0 + j*tile_size, 0);
             glCallList(tileListIndex);
             glPopMatrix();
         }
     }
 
-    for(unsigned int i=0; i<480/tileSize; i++){
+    for(unsigned int i=0; i<480/tile_size; i++){
         glPushMatrix();
-        glTranslated(576.0, i*tileSize, 0);
+        glTranslated(576.0, i*tile_size, 0);
         glCallList(tileListIndex);
         glPopMatrix();
     }
+    */
+
+
+    drawTileGrid();
 
 
     //***Draw a tile given a type parameter!
@@ -417,11 +447,11 @@ int main(int argc, char **argv) {
         glTexCoord2f(0.0,0.0);
         glVertex2f(0.0,0.0);
         glTexCoord2f((1.0/8.0),0.0);
-        glVertex2f(tileSize, 0.0);
+        glVertex2f(tile_size, 0.0);
         glTexCoord2f((1.0/8.0),(1.0/8.0));
-        glVertex2f(tileSize, tileSize);
+        glVertex2f(tile_size, tile_size);
         glTexCoord2f(0.0,(1.0/8.0));
-        glVertex2f(0.0, tileSize);
+        glVertex2f(0.0, tile_size);
     glEnd();
     glEndList();
 
@@ -475,6 +505,19 @@ int main(int argc, char **argv) {
 
     // Disable texturing for now until it's needed again (if left enabled, any shapes drawn use texture data instead)
     glDisable(GL_TEXTURE_2D);
+
+    //*** Create a default tile grid (world) setup
+    for(unsigned int i=0; i<tile_grid_w*(tile_grid_h-5); i++){
+        tile_grid[i] = air;
+    }
+    for(unsigned int i=tile_grid_w*(tile_grid_h-5);
+        i<tile_grid_w*(tile_grid_h-4); i++){
+        tile_grid[i] = grass;
+    }
+    for(unsigned int i=tile_grid_w*(tile_grid_h-4);
+        i<tile_grid_w*tile_grid_h; i++){
+        tile_grid[i] = dirt;
+    }
 
 
 
