@@ -12,7 +12,7 @@
 #include <SDL/SDL_opengl.h>
 using namespace std;
 
-#include "Tile.h"
+#include "tilegrid.h"
 
 // Variables to control game update (tick) rate
 const static int MAXIMUM_TICK_RATE = 120; // The frequency of game state updates
@@ -30,9 +30,6 @@ const static unsigned int screen_height = 480;
 // OpenGL drawing control values
 static GLuint listIndex; // Index of the display list I'm using
 
-static GLuint tileListIndex; // Display list for a tile sprite
-static GLuint tileTexID; // Texture index identifier for the texture I'll be rendering
-
 static GLfloat mouseX = 0;
 static GLfloat mouseY = 0;
 
@@ -40,37 +37,12 @@ static GLfloat squareX = 0.0f; // Position
 static GLfloat squareY = 100.0f;
 static GLfloat squareV = 50.0f; // Velocity (pixels per second)
 
-static GLfloat moveSpeed = 100.0f; // Defined keyboard movement speed
-static GLfloat moveVel = 0; // Current movement speed based on keyboard input state
+static GLfloat playerMoveSpeed = 256.0f; // Player keyboard movement speed
+static GLfloat playerMoveVel = 0; // Current player movement speed based on keyboard input state
 static GLfloat playerPos = 15.0f; // Current player position
 
 
-
-
-// Identifier for each type of tile
-enum TileType {
-    air,
-    grass,
-    dirt
-};
-
-const static int tileTypesListSize=64;
-static Tile tileTypesList[tileTypesListSize]; // Array of tile type objects
-
-// Width and height of the tilesheet image in pixels
-const static unsigned int tilesheet_w = 512;
-const static unsigned int tilesheet_h = 512;
-// Width and height of each tile in pixels within the tilesheet image
-const static unsigned int tilesheet_icon_w = 64;
-const static unsigned int tilesheet_icon_h = 64;
-
-const static GLuint tile_size = 32; // Width and height of a displayed tile in pixels
-
-// Width and height of tile grid in number of tiles
-const static unsigned int tile_grid_w = screen_width/tile_size;
-const static unsigned int tile_grid_h = screen_height/tile_size;
-static TileType tile_grid[tile_grid_w*tile_grid_h]; // Specify tile type for each tile appearing in the world
-
+TileGrid *tile_grid;
 
 
 
@@ -91,17 +63,8 @@ GLfloat controlPoints[4][3]={
 // Update the game state
 void tick();
 
-// Initialize and generate a GL texture; parameters are set to alpha blend overlaying textures. Returns a texture ID
-GLuint generateTileTexture();
-
 // Load an SDL surface and store it as an opengl texture referenced by texID (NOTE, must generate a opengl texture before loading the surface)
 void loadSDLSurfaceToTexture(GLuint texID);
-
-// Draw a tile at the given grid location with a given GL texture ID (tileset texture) and tile type (NOTE: assumes the tilesheet texture has already been enabled/bound)
-void drawTile(int grid_x, int grid_y, TileType type);
-
-// Render the tile grid making up the world
-void drawTileGrid();
 
 // Redraws the screen given the amount of time since the last frame
 void redraw();
@@ -116,25 +79,7 @@ int gfxInit();
 void tick(){
     squareX += squareV*(UPDATE_INTERVAL/1000.0);
 
-    playerPos += moveVel*(UPDATE_INTERVAL/1000.0);
-}
-
-
-
-
-GLuint generateTileTexture(){
-    GLuint texID = 0;
-    glGenTextures(1, &texID);
-    glBindTexture(GL_TEXTURE_2D, texID);
-
-    // Pixel colour is determined directly from texture (no lighting/modulation)
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    // Pixels are read in byte-order
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear interpolation of 4 nearest texels
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    return texID;
+    playerPos += playerMoveVel*(UPDATE_INTERVAL/1000.0);
 }
 
 
@@ -180,52 +125,6 @@ void loadSDLSurfaceToTexture(GLuint texID){
     SDL_FreeSurface(texSurface);
 
     glDisable(GL_TEXTURE_2D);
-}
-
-
-
-
-void drawTile(int grid_x, int grid_y, TileType type){
-    Tile tileType = tileTypesList[type];
-
-    glPushMatrix();
-    glTranslated(grid_x*tile_size, grid_y*tile_size, 0);
-    glBegin(GL_QUADS);
-        glTexCoord2f(tileType.u,tileType.v);
-        glVertex2f(0.0,0.0);
-        glTexCoord2f(tileType.u+tileType.d_u,tileType.v);
-        glVertex2f(tile_size, 0.0);
-        glTexCoord2f(tileType.u+tileType.d_u,tileType.v+tileType.d_v);
-        glVertex2f(tile_size, tile_size);
-        glTexCoord2f(tileType.u,tileType.v+tileType.d_v);
-        glVertex2f(0.0, tile_size);
-
-        /*
-        glTexCoord2f(0.0,0.0);
-        glVertex2f(0.0,0.0);
-        glTexCoord2f(64.0/512.0,0.0);
-        glVertex2f(tileSize, 0.0);
-        glTexCoord2f(64.0/512.0,64.0/512.0);
-        glVertex2f(tileSize, tileSize);
-        glTexCoord2f(0.0,64.0/512.0);
-        glVertex2f(0.0, tileSize);
-        */
-    glEnd();
-    glPopMatrix();
-}
-
-
-
-
-void drawTileGrid(){
-    for(unsigned int x=0; x<tile_grid_w; x++)
-        for(unsigned int y=0; y<tile_grid_h; y++){
-            // Skip drawing if the tile is 'air' type
-            if(tile_grid[y*tile_grid_w + x] == air)
-                continue;
-
-            drawTile(x,y,tile_grid[y*tile_grid_w + x]);
-        }
 }
 
 
@@ -303,50 +202,21 @@ void redraw(){
 
 
 
+    // Draw the tile grid
     glColor4f(1.0,1.0,1.0,1.0);
-    // Draw the textured tiles
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, tileTexID);
+    glPushMatrix();
+    // Translate the grid to desired display position
+    glTranslatef(0, (TileColumn::height-15)*-1.0*TileGrid::tile_size, 0);
 
-    /*
-    for(unsigned int i=0; i<640/tile_size; i++){
-        glPushMatrix();
-        glTranslated(i*tile_size, 416.0, 0);
-        glCallList(tileListIndex);
-        glPopMatrix();
-    }
-    for(unsigned int i=0; i<640/tile_size; i++){
-        for(unsigned int j=0; j<2; j++){
-            glPushMatrix();
-            glTranslated(i*tile_size, 448.0 + j*tile_size, 0);
-            glCallList(tileListIndex);
-            glPopMatrix();
-        }
-    }
+    tile_grid->draw();
 
-    for(unsigned int i=0; i<480/tile_size; i++){
-        glPushMatrix();
-        glTranslated(576.0, i*tile_size, 0);
-        glCallList(tileListIndex);
-        glPopMatrix();
-    }
-    */
-
-
-    drawTileGrid();
-
-
-    //***Draw a tile given a type parameter!
-    drawTile(10,3, dirt);
-
-
-    glDisable(GL_TEXTURE_2D);
+    glPopMatrix();
 
 
 
     // Draw a place holder for the player
     glPushMatrix();
-    glTranslatef(playerPos, 300.0f, 0);
+    glTranslated(playerPos, 288.0, 0);
     glBegin(GL_QUADS);
         glColor3f(0.5f,0.1f,0.1f);
         glVertex2f(0.0f, 0.0f);
@@ -434,90 +304,8 @@ int main(int argc, char **argv) {
     glEndList();
 
 
-
-    // Create a display list for the tile
-    tileListIndex = glGenLists(1);
-    if(listIndex == 0){
-        cout << "List failed" << endl;
-        return 1;
-    }
-
-    glNewList(tileListIndex, GL_COMPILE);
-    glBegin(GL_QUADS);
-        glTexCoord2f(0.0,0.0);
-        glVertex2f(0.0,0.0);
-        glTexCoord2f((1.0/8.0),0.0);
-        glVertex2f(tile_size, 0.0);
-        glTexCoord2f((1.0/8.0),(1.0/8.0));
-        glVertex2f(tile_size, tile_size);
-        glTexCoord2f(0.0,(1.0/8.0));
-        glVertex2f(0.0, tile_size);
-    glEnd();
-    glEndList();
-
-
-
-    // Lets try texture mapping something...
-    glEnable(GL_TEXTURE_2D);
-
-    // Generate a transparent tile for "air"
-    GLuint airTex[16*16*4];
-    for(int x=0; x<16*16; x++){
-        airTex[x*4] = 0;
-        airTex[x*4 +1] = 0;
-        airTex[x*4 +2] = 0;
-        airTex[x*4 +3] = 0;
-    }
-    // Generate the opengl texture ID for 'air'
-    GLuint airTexID = 0;
-    airTexID = generateTileTexture();
-    // Copy the transparent array to video memory
-    glTexImage2D(GL_TEXTURE_2D, 0, 4, 16, 16, 0, GL_RGBA, GL_UNSIGNED_BYTE, airTex);
-    // Assign the texture data to the air tile type
-    tileTypesList[air].texID = airTexID;
-    tileTypesList[air].u = 0.0;
-    tileTypesList[air].v = 0.0;
-    tileTypesList[air].d_u = 1.0;
-    tileTypesList[air].d_v = 1.0;
-
-
-    // Load the tilesheet texture
-    tileTexID = generateTileTexture();
-
-    loadSDLSurfaceToTexture(tileTexID);
-
-    // Determine tile width/height in tilesheet texture coordinates
-    double u_width = (double)tilesheet_icon_w/(double)tilesheet_w;
-    double v_height = (double)tilesheet_icon_h/(double)tilesheet_h;
-    // Assign grass tile properties
-    tileTypesList[grass].texID = tileTexID;
-    tileTypesList[grass].u = 0.0;
-    tileTypesList[grass].v = 0.0;
-    tileTypesList[grass].d_u = u_width;
-    tileTypesList[grass].d_v = v_height;
-    // Assign dirt tile properties
-    tileTypesList[dirt].texID = tileTexID;
-    tileTypesList[dirt].u = u_width;
-    tileTypesList[dirt].v = 0.0;
-    tileTypesList[dirt].d_u = u_width;
-    tileTypesList[dirt].d_v = v_height;
-
-
-    // Disable texturing for now until it's needed again (if left enabled, any shapes drawn use texture data instead)
-    glDisable(GL_TEXTURE_2D);
-
-    //*** Create a default tile grid (world) setup
-    for(unsigned int i=0; i<tile_grid_w*(tile_grid_h-5); i++){
-        tile_grid[i] = air;
-    }
-    for(unsigned int i=tile_grid_w*(tile_grid_h-5);
-        i<tile_grid_w*(tile_grid_h-4); i++){
-        tile_grid[i] = grass;
-    }
-    for(unsigned int i=tile_grid_w*(tile_grid_h-4);
-        i<tile_grid_w*tile_grid_h; i++){
-        tile_grid[i] = dirt;
-    }
+    // ***Create the default tile grid
+    tile_grid = TileGrid::createDefaultTileGrid();
 
 
 
@@ -559,18 +347,18 @@ int main(int argc, char **argv) {
                 }
                 else if(event.type == SDL_KEYDOWN){
                     if(event.key.keysym.sym == SDLK_RIGHT){
-                        moveVel += moveSpeed;
+                        playerMoveVel += playerMoveSpeed;
                     }
                     else if(event.key.keysym.sym == SDLK_LEFT){
-                        moveVel -= moveSpeed;
+                        playerMoveVel -= playerMoveSpeed;
                     }
                 }
                 else if(event.type == SDL_KEYUP){
                     if(event.key.keysym.sym == SDLK_RIGHT){
-                        moveVel -= moveSpeed;
+                        playerMoveVel -= playerMoveSpeed;
                     }
                     else if(event.key.keysym.sym == SDLK_LEFT){
-                        moveVel += moveSpeed;
+                        playerMoveVel += playerMoveSpeed;
                     }
                 }
                 else if(event.type == SDL_QUIT)
