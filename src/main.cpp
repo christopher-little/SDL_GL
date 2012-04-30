@@ -63,9 +63,6 @@ GLfloat controlPoints[4][3]={
 // Update the game state
 void tick();
 
-// Load an SDL surface and store it as an opengl texture referenced by texID (NOTE, must generate a opengl texture before loading the surface)
-void loadSDLSurfaceToTexture(GLuint texID);
-
 // Redraws the screen given the amount of time since the last frame
 void redraw();
 
@@ -81,52 +78,6 @@ void tick(){
 
     playerPos += playerMoveVel*(UPDATE_INTERVAL/1000.0);
 }
-
-
-
-
-void loadSDLSurfaceToTexture(GLuint texID){
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, texID);
-
-    GLenum texFormat;
-    GLint nColors;
-
-    SDL_Surface *texSurface = IMG_Load("assets/tiles.png");
-    if(texSurface == NULL){
-        cout << "Couldn't load image" << endl;
-    }
-
-    nColors = texSurface->format->BytesPerPixel;
-    if(nColors == 4){
-        if(texSurface->format->Rmask == 0x000000ff){
-            texFormat = GL_RGBA;
-        }
-        else{
-            texFormat = GL_BGRA;
-        }
-    }
-    else if(nColors == 3){
-        if(texSurface->format->Rmask == 0x000000ff){
-            texFormat = GL_RGB;
-        }
-        else{
-            texFormat = GL_BGR;
-        }
-    }
-    else{
-        // This isn't a true color image format...
-    }
-
-    // Load the SDL surface pixel data into opengl video/texture memory
-    glTexImage2D(GL_TEXTURE_2D, 0, nColors, texSurface->w, texSurface->h, 0, texFormat, GL_UNSIGNED_BYTE, texSurface->pixels);
-
-    // Clean up the SDL surface data
-    SDL_FreeSurface(texSurface);
-
-    glDisable(GL_TEXTURE_2D);
-}
-
 
 
 

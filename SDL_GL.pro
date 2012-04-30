@@ -21,7 +21,8 @@ LIBS += -lSDL -lSDL_image
 # Input
 HEADERS += src/Entity.h \
     src/Texture.h \
-    src/TileGrid.h
+    src/TileGrid.h \
+    src/Tile.h
 SOURCES += src/Entity.cpp src/main.cpp \
     src/Texture.cpp \
     src/TileGrid.cpp

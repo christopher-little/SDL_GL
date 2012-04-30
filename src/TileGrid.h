@@ -7,15 +7,8 @@ using namespace std;
 #include <SDL/SDL_opengl.h>
 
 #include "Texture.h"
+#include "Tile.h"
 
-
-
-// Identifier for each type of tile
-enum TileType {
-    air,
-    grass,
-    dirt
-};
 
 
 /* ***Tile type identifier acts as index to tilesheet array
@@ -46,26 +39,28 @@ public:
 class TileGrid
 {
 public:
-    // Each column contains a list of tile type id's.
-    list<TileColumn> columns; // List of tile columns
-
-
-    // Image containing all tiles
-    Texture *tilesheet_tex;
-
-    // List of UV coordinates into the tilesheet texture for each tile
-    UVSection *tile_uv_coords;
-
-
     // Dimensions of a tile when displayed
     const static float tile_size = 32.0;
+
+
+    // Image containing all tile graphics
+    Texture *tilesheet_tex;
+
+    // List of tile types
+    Tile *tile_types_list;
+
+
+    // Each column contains a list of tile type id's.
+    list<TileColumn> columns;
+
+
 
 
 
     TileGrid();
 
     // Breakup tilesheet texture into component tiles
-    void parseTilesheet(unsigned int tile_width, unsigned int tile_height);
+    void parseTilesheet(Texture *tilesheet_texture, unsigned int tile_width, unsigned int tile_height);
 
     void draw();
 
@@ -87,12 +82,8 @@ public:
         // Insert 20 copies of the default column (enough to fill the default screen size)
         tile_grid->columns.insert(tile_grid->columns.begin(), 20, column);
 
-
-        // Load in the tilesheet texture to use
-        tile_grid->tilesheet_tex = new Texture((char *)"assets/tiles.png");
-
         // Segregate the tile uv coordinates (assuming all tile images are 64x64 pixels)
-        tile_grid->parseTilesheet(64,64);
+        tile_grid->parseTilesheet(new Texture((char *)"assets/tiles.png"), 64,64);
 
 
         return tile_grid;

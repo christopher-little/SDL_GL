@@ -2,29 +2,35 @@
 
 
 TileGrid::TileGrid(){
-
+    tilesheet_tex = NULL;
 }
 
-void TileGrid::parseTilesheet(unsigned int tile_width, unsigned int tile_height){
+void TileGrid::parseTilesheet(Texture *tilesheet_texture, unsigned int tile_width, unsigned int tile_height){
+    tilesheet_tex = tilesheet_texture;
+
+
     // Number of tiles in x and y directions contained in the tilesheet
     unsigned int tile_count_x = tilesheet_tex->w/tile_width;
     unsigned int tile_count_y = tilesheet_tex->h/tile_height;
 
     unsigned int tile_count = tile_count_x*tile_count_y;
 
-    // Width and height of each tile in pixels
+    // Width and height of each tile in u,v coordinates
     float tile_size_x = 1.0/tile_count_x;
     float tile_size_y = 1.0/tile_count_y;
 
-    tile_uv_coords = new UVSection[tile_count];
+    // Initialize list of tile types
+    tile_types_list = new Tile[tile_count];
 
+    UVSection *uv_coords = NULL;
     for(unsigned int y=0; y<tile_count_y; y++) for(unsigned int x=0; x<tile_count_x; x++){
         unsigned int i=y*tile_count_x + x;
+        uv_coords = &tile_types_list[i].uv_coords;
 
-        tile_uv_coords[i].umin = x*tile_size_x;
-        tile_uv_coords[i].umax = tile_uv_coords[i].umin + tile_size_x;
-        tile_uv_coords[i].vmin = y*tile_size_y;
-        tile_uv_coords[i].vmax = tile_uv_coords[i].vmin + tile_size_y;
+        uv_coords->umin = x*tile_size_x;
+        uv_coords->umax = uv_coords->umin + tile_size_x;
+        uv_coords->vmin = y*tile_size_y;
+        uv_coords->vmax = uv_coords->vmin + tile_size_y;
     }
 }
 
@@ -34,7 +40,7 @@ void TileGrid::draw(){
     glBindTexture(GL_TEXTURE_2D, tilesheet_tex->id);
 
     int tile_id = -1;
-    UVSection *uv_coords;
+    UVSection *uv_coords = NULL;
 
 
     int x=0;
@@ -49,7 +55,7 @@ void TileGrid::draw(){
                 continue;
 
             // Retreive UVSection for this tile
-            uv_coords = &tile_uv_coords[tile_id];
+            uv_coords = &tile_types_list[tile_id].uv_coords;
 
             // Draw the tile
             glPushMatrix();
